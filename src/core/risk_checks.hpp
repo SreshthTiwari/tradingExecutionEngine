@@ -1,22 +1,22 @@
 #ifndef RISK_CHECKS_HPP
 #define RISK_CHECKS_HPP
 
-#include <vector>
-#include <string>
+#include "types.hpp"
 
-// contains functions for evaluating trade risks
+struct RiskLimits
+{
+    Quantity max_order_size;
+    Price min_price;
+    Price max_price;
+};
 
-class RiskChecks {
+// pre-trade risk checks
+class RiskChecks
+{
 public:
-    // evaluates if trade order exceeds risk limits
-    static bool check_order_size(double order_size, double max_size);
-
-    // evaluates if trade violates price constraints
-    static bool check_price_limits(double order_price, double min_price, double max_price);
-
-    // evaluates if trade passes all risk criteria
-    static bool validate_trade(double order_size, double max_size, 
-                               double order_price, double min_price, double max_price);
+    static bool check_order_size(Quantity size, Quantity max_size);
+    static bool check_price_limits(Price price, Price min_price, Price max_price);
+    static bool validate_order(Quantity size, Price price, const RiskLimits &limits);
 };
 
 #endif // RISK_CHECKS_HPP

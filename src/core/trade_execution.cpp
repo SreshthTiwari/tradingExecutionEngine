@@ -1,15 +1,30 @@
 #include "trade_execution.hpp"
-#include <iostream>
 
-// processes trade order and executes if risk criteria met
-bool TradeExecution::execute_trade(double order_size, double order_price, 
-                                   double max_size, double min_price, double max_price) {
-    if (!RiskChecks::validate_trade(order_size, max_size, order_price, min_price, max_price)) {
-        std::cout << "trade execution failed: risk checks not passed" << std::endl;
-        return false;
-    }
+Status TradeExecution::submit(const OrderRequest &request, std::vector<Trade> &trades)
+{
+    const bool passes = request.type == OrderType::Market
+                            ? RiskChecks::check_order_size(request.quantity, limits_.max_order_size)
+                            : RiskChecks::validate_order(request.quantity, request.price, limits_);
+    if (!passes)
+        return Status::RiskRejected;
 
-    // logic for sending order to market (mocked)
-    std::cout << "trade executed: size=" << order_size << " price=" << order_price << std::endl;
-    return true;
+    return engine_.submit(request, trades);
+}
+
+Status TradeExecution::modify(OrderId id, Price new_price, Quantity new_quantity, std::vector<Trade> &trades)
+{
+    if (!RiskChecks::validate_order(new_quantity, new_price, limits_))
+        return Status::RiskRejected;
+
+    return engine_.modify_order(id, new_price, new_quantity, trades);
+}
+
+std::optional<std::vector<Trade>> TradeExecution::execute(OrderId id, Side side, Price price, Quantity quantity)
+{
+    std::vector<Trade> trades;
+    const Status status =
+        submit(OrderRequest{id, side, OrderType::Limit, TimeInForce::GTC, price, quantity}, trades);
+    if (status != Status::Ok)
+        return std::nullopt;
+    return trades;
 }
